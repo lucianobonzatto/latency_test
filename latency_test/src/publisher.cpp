@@ -66,7 +66,7 @@ private:
 
     void save_latencies_to_csv()
     {
-        csv_file_path = "/home/ubuntu22/ros2_ws/src/latency_test/latency_test/data/latencies.csv";
+        csv_file_path = "/home/ubuntu22/ros2_ws/src/latency_test/data/latencies.csv";
         RCLCPP_INFO(this->get_logger(), "save CSV file: %s", csv_file_path.c_str());
         std::ofstream csv_file(csv_file_path, std::ios::out | std::ios::trunc);
 
