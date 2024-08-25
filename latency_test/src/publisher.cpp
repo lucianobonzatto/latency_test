@@ -17,13 +17,8 @@ public:
     {
         initialize_latencies();
         csv_file_path = "/home/ubuntu22/ros2_ws/src/latency_test/data/latencies.csv";
-
-        this->declare_parameter<int>("publish_interval_ms", 1000);
-        publish_interval = this->get_parameter("publish_interval_ms").as_int();
-        this->declare_parameter<int>("data_size", 10);
-        data_size = this->get_parameter("data_size").as_int();
-
-        // Criar uma mensagem
+        publish_interval = 1000;
+        data_size = 10;
         message.sequence_number = 0;
         message.data.resize(data_size);
         std::iota(message.data.begin(), message.data.end(), 1);
@@ -32,13 +27,6 @@ public:
         // Criar um publicador
         publisher_ = this->create_publisher<latency_test_msgs::msg::Data>(
             "chatter", 10);
-
-        // Definir um temporizador para publicar mensagens
-        timer_ = this->create_wall_timer(milliseconds(publish_interval), [this](){
-            message.header.stamp = this->now();
-            publisher_->publish(message); 
-            message.sequence_number++;});
-        timer_->cancel();
 
         // Criar um assinante
         subscription_ = this->create_subscription<latency_test_msgs::msg::Data>(
@@ -86,10 +74,14 @@ private:
         }
 
         // Escrever o cabeçalho no arquivo CSV
-        csv_file << "Sequence Number,Latency(ns)" << std::endl;
+        csv_file << "Sequence;Data_size;publish_interval;Latency(ns)" << std::endl;
         for (size_t i = 0; i < OUT_SIZE; ++i)
         {
-            csv_file << i << ";" << latencies[i] << std::endl;
+            csv_file << i << ";"
+                     << data_size << ";"
+                     << publish_interval << ";"
+                     << latencies[i]
+                     << std::endl;
             latencies[i] = 0;
         }
         csv_file.close();
@@ -107,28 +99,37 @@ private:
             std::shared_ptr<latency_test_msgs::srv::FileRequest::Response>      response)
     {
         csv_file_path = "/home/ubuntu22/ros2_ws/src/latency_test/data/" + request->name + ".csv";
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Incoming request: %s", csv_file_path.c_str());
-        message.sequence_number = 0;
+        data_size = request->size;
+        publish_interval = request->publish_interval;
+
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"),
+                    "request: %s data_size: %ld publish_interval: %d",
+                    csv_file_path.c_str(),
+                    data_size,
+                    publish_interval);
+
         initialize_latencies();
+        message.sequence_number = 0;
+        message.data.resize(data_size);
+        std::iota(message.data.begin(), message.data.end(), 1);
+        message.header.frame_id = "base_frame";
 
-        if (timer_ && !timer_->is_canceled()) {
-            timer_->cancel();
-        }
+        // Definir um temporizador para publicar mensagens
+        timer_ = this->create_wall_timer(milliseconds(publish_interval), [this](){
+            message.header.stamp = this->now();
+            publisher_->publish(message); 
+            message.sequence_number++;});
 
-        timer_->reset();
-        response->response = timer_->is_ready();
+        response->response = 1;
     }
-
 
     rclcpp::Publisher<latency_test_msgs::msg::Data>::SharedPtr publisher_;
     rclcpp::Subscription<latency_test_msgs::msg::Data>::SharedPtr subscription_;
     rclcpp::Service<latency_test_msgs::srv::FileRequest>::SharedPtr service_;
-
-
     rclcpp::TimerBase::SharedPtr timer_;
     latency_test_msgs::msg::Data message;
     int publish_interval;
-    int data_size;
+    long data_size;
     long latencies[OUT_SIZE];
     std::string csv_file_path;
 };
