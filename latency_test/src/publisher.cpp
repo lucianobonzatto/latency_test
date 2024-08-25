@@ -5,6 +5,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include "latency_test_msgs/msg/data.hpp"
+#include "latency_test_msgs/srv/file_request.hpp"
 
 using namespace std::chrono;
 #define OUT_SIZE (50)
@@ -15,6 +16,8 @@ public:
     LatencyTestNode() : Node("latency_test_node")
     {
         initialize_latencies();
+        csv_file_path = "/home/ubuntu22/ros2_ws/src/latency_test/data/latencies.csv";
+
         this->declare_parameter<int>("publish_interval_ms", 1000);
         publish_interval = this->get_parameter("publish_interval_ms").as_int();
         this->declare_parameter<int>("data_size", 10);
@@ -27,7 +30,15 @@ public:
         message.header.frame_id = "base_frame";
 
         // Criar um publicador
-        publisher_ = this->create_publisher<latency_test_msgs::msg::Data>("chatter", 10);
+        publisher_ = this->create_publisher<latency_test_msgs::msg::Data>(
+            "chatter", 10);
+
+        // Definir um temporizador para publicar mensagens
+        timer_ = this->create_wall_timer(milliseconds(publish_interval), [this](){
+            message.header.stamp = this->now();
+            publisher_->publish(message); 
+            message.sequence_number++;});
+        timer_->cancel();
 
         // Criar um assinante
         subscription_ = this->create_subscription<latency_test_msgs::msg::Data>(
@@ -35,12 +46,11 @@ public:
             [this](latency_test_msgs::msg::Data::SharedPtr msg)
             { this->subscription_callback(msg); });
 
-        // Definir um temporizador para publicar mensagens
-        timer_ = this->create_wall_timer(milliseconds(publish_interval), [this]()
-                                         {
-            message.header.stamp = this->now();
-            publisher_->publish(message); 
-            message.sequence_number++;});
+        // Criar um serviço
+        service_ = this->create_service<latency_test_msgs::srv::FileRequest>("start_test", 
+            [this](const std::shared_ptr<latency_test_msgs::srv::FileRequest::Request> request,
+            std::shared_ptr<latency_test_msgs::srv::FileRequest::Response>      response)
+            { this->start_test(request, response); });
     }
 
 private:
@@ -66,7 +76,6 @@ private:
 
     void save_latencies_to_csv()
     {
-        csv_file_path = "/home/ubuntu22/ros2_ws/src/latency_test/data/latencies.csv";
         RCLCPP_INFO(this->get_logger(), "save CSV file: %s", csv_file_path.c_str());
         std::ofstream csv_file(csv_file_path, std::ios::out | std::ios::trunc);
 
@@ -94,8 +103,28 @@ private:
         }
     }
     
+    void start_test(const std::shared_ptr<latency_test_msgs::srv::FileRequest::Request> request,
+            std::shared_ptr<latency_test_msgs::srv::FileRequest::Response>      response)
+    {
+        csv_file_path = "/home/ubuntu22/ros2_ws/src/latency_test/data/" + request->name + ".csv";
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Incoming request: %s", csv_file_path.c_str());
+        message.sequence_number = 0;
+        initialize_latencies();
+
+        if (timer_ && !timer_->is_canceled()) {
+            timer_->cancel();
+        }
+
+        timer_->reset();
+        response->response = timer_->is_ready();
+    }
+
+
     rclcpp::Publisher<latency_test_msgs::msg::Data>::SharedPtr publisher_;
     rclcpp::Subscription<latency_test_msgs::msg::Data>::SharedPtr subscription_;
+    rclcpp::Service<latency_test_msgs::srv::FileRequest>::SharedPtr service_;
+
+
     rclcpp::TimerBase::SharedPtr timer_;
     latency_test_msgs::msg::Data message;
     int publish_interval;
