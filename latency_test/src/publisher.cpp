@@ -16,12 +16,7 @@ public:
     LatencyTestNode() : Node("latency_test_node")
     {
         initialize_latencies();
-        csv_file_path = "/home/ubuntu22/ros2_ws/src/latency_test/data/latencies.csv";
-        publish_interval = 1000;
-        data_size = 10;
         message.sequence_number = 0;
-        message.data.resize(data_size);
-        std::iota(message.data.begin(), message.data.end(), 1);
         message.header.frame_id = "base_frame";
 
         // Criar um publicador
@@ -64,6 +59,7 @@ private:
 
     void save_latencies_to_csv()
     {
+        std::string csv_file_path = "/home/ubuntu22/ros2_ws/src/latency_test/data/" + test_request.name + ".csv";
         RCLCPP_INFO(this->get_logger(), "save CSV file: %s", csv_file_path.c_str());
         std::ofstream csv_file(csv_file_path, std::ios::out | std::ios::trunc);
 
@@ -74,12 +70,15 @@ private:
         }
 
         // Escrever o cabeçalho no arquivo CSV
-        csv_file << "Sequence;Data_size;publish_interval;Latency(ns)" << std::endl;
+        csv_file << "Sequence;Data_size;publish_interval;cpu;vm;vm_bytes;Latency(ns)" << std::endl;
         for (size_t i = 0; i < OUT_SIZE; ++i)
         {
             csv_file << i << ";"
-                     << data_size << ";"
-                     << publish_interval << ";"
+                     << test_request.size << ";"
+                     << test_request.publish_interval << ";"
+                     << test_request.cpu  << ";"
+                     << test_request.vm  << ";"
+                     << test_request.vm_bytes  << ";"
                      << latencies[i]
                      << std::endl;
             latencies[i] = 0;
@@ -98,24 +97,26 @@ private:
     void start_test(const std::shared_ptr<latency_test_msgs::srv::FileRequest::Request> request,
             std::shared_ptr<latency_test_msgs::srv::FileRequest::Response>      response)
     {
-        csv_file_path = "/home/ubuntu22/ros2_ws/src/latency_test/data/" + request->name + ".csv";
-        data_size = request->size;
-        publish_interval = request->publish_interval;
-
+        test_request = *request;
         RCLCPP_INFO(rclcpp::get_logger("rclcpp"),
-                    "request: %s data_size: %ld publish_interval: %d",
-                    csv_file_path.c_str(),
-                    data_size,
-                    publish_interval);
+                    "request: %s \n\tdata_size: %ld publish_interval: %ld cpu: %ld vm: %ld vm_bytes: %ld",
+                    test_request.name.c_str(),
+                    test_request.size,
+                    test_request.publish_interval,
+                    test_request.cpu,
+                    test_request.vm,
+                    test_request.vm_bytes
+                    );
 
         initialize_latencies();
         message.sequence_number = 0;
-        message.data.resize(data_size);
+        message.data.resize(test_request.size);
         std::iota(message.data.begin(), message.data.end(), 1);
         message.header.frame_id = "base_frame";
 
         // Definir um temporizador para publicar mensagens
-        timer_ = this->create_wall_timer(milliseconds(publish_interval), [this](){
+        timer_ = this->create_wall_timer(milliseconds(test_request.publish_interval), 
+            [this](){
             message.header.stamp = this->now();
             publisher_->publish(message); 
             message.sequence_number++;});
@@ -128,10 +129,8 @@ private:
     rclcpp::Service<latency_test_msgs::srv::FileRequest>::SharedPtr service_;
     rclcpp::TimerBase::SharedPtr timer_;
     latency_test_msgs::msg::Data message;
-    int publish_interval;
-    long data_size;
+    latency_test_msgs::srv::FileRequest::Request test_request;
     long latencies[OUT_SIZE];
-    std::string csv_file_path;
 };
 
 int main(int argc, char **argv)

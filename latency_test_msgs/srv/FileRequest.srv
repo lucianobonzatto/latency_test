@@ -1,5 +1,8 @@
 string name
 int64 size
 int64 publish_interval
+int64 cpu
+int64 vm
+int64 vm_bytes
 ---
 bool response
