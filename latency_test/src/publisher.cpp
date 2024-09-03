@@ -36,13 +36,9 @@ private:
     {
         test_request = *request;
         RCLCPP_INFO(rclcpp::get_logger("rclcpp"),
-                    "request: %s \n\tdata_size: %ld publish_interval: %ld cpu: %ld vm: %ld vm_bytes: %ld",
-                    test_request.name.c_str(),
+                    "request: \n\tdata_size: %ld publish_interval: %ld",
                     test_request.size,
-                    test_request.publish_interval,
-                    test_request.cpu,
-                    test_request.vm,
-                    test_request.vm_bytes
+                    test_request.publish_interval
                     );
 
         message.sequence_number = 0;
