@@ -13,12 +13,16 @@ find_package(geometry_msgs REQUIRED)
 find_package(latency_test_msgs REQUIRED)
 find_package(ament_index_cpp REQUIRED)
 
+add_executable(latency_test src/latency_test.cpp)
+ament_target_dependencies(latency_test rclcpp latency_test_msgs ament_index_cpp)
+target_compile_features(latency_test PUBLIC c_std_99 cxx_std_17) # Require C99 and C++17
+
 add_executable(publisher src/publisher.cpp)
 ament_target_dependencies(publisher rclcpp latency_test_msgs ament_index_cpp)
 target_compile_features(publisher PUBLIC c_std_99 cxx_std_17) # Require C99 and C++17
 
 install(TARGETS
-  publisher
+  latency_test
   DESTINATION lib/${PROJECT_NAME})
   
 if(BUILD_TESTING)
