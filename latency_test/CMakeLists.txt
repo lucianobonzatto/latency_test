@@ -21,9 +21,14 @@ add_executable(publisher_node src/publisher.cpp)
 ament_target_dependencies(publisher_node rclcpp latency_test_msgs ament_index_cpp)
 target_compile_features(publisher_node PUBLIC c_std_99 cxx_std_17) # Require C99 and C++17
 
+add_executable(subscriber_node src/subscriber.cpp)
+ament_target_dependencies(subscriber_node rclcpp latency_test_msgs ament_index_cpp)
+target_compile_features(subscriber_node PUBLIC c_std_99 cxx_std_17) # Require C99 and C++17
+
 install(TARGETS
   latency_node
   publisher_node
+  subscriber_node
   DESTINATION lib/${PROJECT_NAME})
   
 if(BUILD_TESTING)
