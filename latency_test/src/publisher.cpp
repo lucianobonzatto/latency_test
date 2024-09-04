@@ -10,10 +10,10 @@
 using namespace std::chrono;
 #define OUT_SIZE (50)
 
-class LatencyTestNode : public rclcpp::Node
+class PublishTestNode : public rclcpp::Node
 {
 public:
-    LatencyTestNode() : Node("latency_test_node")
+    PublishTestNode() : Node("publisher_test_node")
     {
         message.sequence_number = 0;
         message.header.frame_id = "base_frame";
@@ -72,7 +72,7 @@ private:
 int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<LatencyTestNode>();
+    auto node = std::make_shared<PublishTestNode>();
     rclcpp::spin(node);
 
     rclcpp::shutdown();

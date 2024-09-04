@@ -90,7 +90,7 @@ private:
 
     void initialize_latencies()
     {
-        for (size_t i = 0; i < OUT_SIZE; ++i)
+        for (size_t i = 0; i < OUT_SIZE; i++)
         {
             latencies[i] = 0;
             publish_time[i] = 0;
