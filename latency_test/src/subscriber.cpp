@@ -65,21 +65,22 @@ private:
         }
 
         // Escrever o cabeçalho no arquivo CSV
-        csv_file << "Sequence;Data_size;publish_interval;cpu;vm;vm_bytes;Latency(ns);publish_time(ns)" << std::endl;
-    //     for (size_t i = 0; i < IN_SIZE; ++i)
-    //     {
-    //         csv_file << i << ";"
-    //                  << test_request.size << ";"
+        csv_file << "Sequence;subscriber_id;Data_size;publish_interval;Latency(ns);publish_time(ns)" << std::endl;
+        for (size_t j = 0; j < SUBS_NUMBER; j++)
+        {
+        for (size_t i = 0; i < IN_SIZE; ++i)
+        {
+            csv_file << i << ";"
+                     << j << ";"
+    //                 << test_request.size << ";"
     //                  << test_request.publish_interval << ";"
-    //                  << test_request.cpu  << ";"
-    //                  << test_request.vm  << ";"
-    //                  << test_request.vm_bytes  << ";"
     //                  << latencies[i]  << ";"
     //                  << publish_time[i]
-    //                  << std::endl;
+                     << std::endl;
     //         latencies[i] = 0;
     //         publish_time[i] = 0;
-    //     }
+        }
+        }
         csv_file.close();
     }
 
