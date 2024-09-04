@@ -5,7 +5,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include "latency_test_msgs/msg/data.hpp"
-#include "latency_test_msgs/srv/file_request.hpp"
+#include "latency_test_msgs/srv/publish_request.hpp"
 
 using namespace std::chrono;
 #define OUT_SIZE (50)
@@ -23,16 +23,16 @@ public:
             "chatter", 10);
 
         // Criar um serviço
-        service_ = this->create_service<latency_test_msgs::srv::FileRequest>("start_test", 
-            [this](const std::shared_ptr<latency_test_msgs::srv::FileRequest::Request> request,
-            std::shared_ptr<latency_test_msgs::srv::FileRequest::Response>      response)
+        service_ = this->create_service<latency_test_msgs::srv::PublishRequest>("start_publisher", 
+            [this](const std::shared_ptr<latency_test_msgs::srv::PublishRequest::Request> request,
+            std::shared_ptr<latency_test_msgs::srv::PublishRequest::Response>      response)
             { this->start_test(request, response); });
     }
 
 private:
     
-    void start_test(const std::shared_ptr<latency_test_msgs::srv::FileRequest::Request> request,
-            std::shared_ptr<latency_test_msgs::srv::FileRequest::Response>      response)
+    void start_test(const std::shared_ptr<latency_test_msgs::srv::PublishRequest::Request> request,
+            std::shared_ptr<latency_test_msgs::srv::PublishRequest::Response>      response)
     {
         test_request = *request;
         RCLCPP_INFO(rclcpp::get_logger("rclcpp"),
@@ -51,16 +51,22 @@ private:
             [this](){
             message.header.stamp = this->now();
             publisher_->publish(message); 
-            message.sequence_number++;});
+            message.sequence_number++;
+            if(message.sequence_number == OUT_SIZE)
+            {
+                timer_->cancel();
+                message.sequence_number = 0;
+            }
+            });
 
         response->response = 1;
     }
 
     rclcpp::Publisher<latency_test_msgs::msg::Data>::SharedPtr publisher_;
-    rclcpp::Service<latency_test_msgs::srv::FileRequest>::SharedPtr service_;
+    rclcpp::Service<latency_test_msgs::srv::PublishRequest>::SharedPtr service_;
     rclcpp::TimerBase::SharedPtr timer_;
     latency_test_msgs::msg::Data message;
-    latency_test_msgs::srv::FileRequest::Request test_request;
+    latency_test_msgs::srv::PublishRequest::Request test_request;
 };
 
 int main(int argc, char **argv)
