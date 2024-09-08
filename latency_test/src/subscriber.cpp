@@ -31,6 +31,7 @@ private:
     void handle_service_request(const std::shared_ptr<latency_test_msgs::srv::SubscribeRequest::Request> request,
                                 std::shared_ptr<latency_test_msgs::srv::SubscribeRequest::Response> response)
     {
+        test_request = *request;
         RCLCPP_INFO(this->get_logger(), "request: %ld %ld %ld %ld", 
             request->size,
             request->publish_interval,
@@ -62,6 +63,7 @@ private:
                 save_latencies_to_csv();
                 initialize_latencies();
                 subscribers_.clear();
+                timer_->cancel();
             });
         
         // Exemplo de como definir a resposta do serviço
@@ -96,20 +98,22 @@ private:
         }
 
         // Escrever o cabeçalho no arquivo CSV
-        csv_file << "Sequence;subscriber_id;Data_size;publish_interval;Latency(ns);publish_time(ns)" << std::endl;
-        for (size_t j = 0; j < MAX_SUBS_NUMBER; j++)
+        csv_file << "Sequence;subscriber_id;Data_size;publish_interval;publisher_number;subscriber_number;Latency(ns);publish_time(ns)" << std::endl;
+        for (size_t j = 0; j < subscribers_.size(); ++j)
         {
             for (size_t i = 0; i < IN_SIZE; ++i)
             {
                 csv_file << i << ";"
                          << j << ";"
-    //                     << test_request.size << ";"
-    //                      << test_request.publish_interval << ";"
-    //                      << latencies[i]  << ";"
-    //                      << publish_time[i]
+                         << test_request.size << ";"
+                         << test_request.publish_interval << ";"
+                         << test_request.publisher_number << ";"
+                         << test_request.subscriber_number << ";"
+                         << latencies[i][j]  << ";"
+                         << publish_time[i][j]
                          << std::endl;
-    //             latencies[i] = 0;
-    //             publish_time[i] = 0;
+                latencies[i][j] = 0;
+                publish_time[i][j] = 0;
             }
         }
         csv_file.close();
@@ -132,6 +136,7 @@ private:
     long publish_time[IN_SIZE][MAX_SUBS_NUMBER];
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Service<latency_test_msgs::srv::SubscribeRequest>::SharedPtr service_;
+    latency_test_msgs::srv::SubscribeRequest::Request test_request;
 };
 
 int main(int argc, char **argv)
