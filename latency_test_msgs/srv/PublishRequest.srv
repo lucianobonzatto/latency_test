@@ -1,4 +1,5 @@
 int64 size
 int64 publish_interval
+int64 publisher_number
 ---
 bool response
