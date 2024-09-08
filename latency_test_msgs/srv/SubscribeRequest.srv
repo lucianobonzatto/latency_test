@@ -1,6 +1,6 @@
 int64 size
 int64 publish_interval
 int64 publisher_number
-int64 subcriber_number
+int64 subscriber_number
 ---
 bool response

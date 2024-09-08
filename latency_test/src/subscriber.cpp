@@ -49,12 +49,12 @@ private:
     void handle_service_request(const std::shared_ptr<latency_test_msgs::srv::SubscribeRequest::Request> request,
                                 std::shared_ptr<latency_test_msgs::srv::SubscribeRequest::Response> response)
     {
-        // Adicione aqui a lógica para lidar com a configuração do serviço, se necessário
+        // Lógica para lidar com a configuração do serviço, se necessário
         RCLCPP_INFO(this->get_logger(), "request: %ld %ld %ld %ld", 
             request->size,
             request->publish_interval,
             request->publisher_number,
-            request->subcriber_number);
+            request->subscriber_number);
         
         // Exemplo de como definir a resposta do serviço
         response->response = true;
