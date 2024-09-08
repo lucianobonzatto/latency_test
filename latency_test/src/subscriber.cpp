@@ -4,7 +4,7 @@
 #include <fstream>
 
 #include <rclcpp/rclcpp.hpp>
-#include "latency_test_msgs/msg/data.hpp"
+#include "latency_test_msgs/msg/datamult.hpp"
 #include "latency_test_msgs/srv/subscribe_request.hpp"  // Inclua o serviço SubscribeRequest
 
 using namespace std::chrono;
@@ -50,9 +50,9 @@ private:
         subscribers_.clear();
         for (int i = 0; i < num_subscribers; i++)
         {
-            auto subscription = this->create_subscription<latency_test_msgs::msg::Data>(
+            auto subscription = this->create_subscription<latency_test_msgs::msg::Datamult>(
                 "chatter", 10,
-                [this, i](latency_test_msgs::msg::Data::SharedPtr msg)
+                [this, i](latency_test_msgs::msg::Datamult::SharedPtr msg)
                 { this->subscription_callback(msg, i); });
             subscribers_.push_back(subscription);
         }
@@ -70,7 +70,7 @@ private:
         response->response = true;
     }
 
-    void subscription_callback(latency_test_msgs::msg::Data::SharedPtr msg, int id)
+    void subscription_callback(latency_test_msgs::msg::Datamult::SharedPtr msg, int id)
     {
         auto latency = this->now() - msg->header.stamp;
         if (msg->sequence_number < IN_SIZE)
@@ -131,7 +131,7 @@ private:
         }
     }
     
-    std::vector<rclcpp::Subscription<latency_test_msgs::msg::Data>::SharedPtr> subscribers_;
+    std::vector<rclcpp::Subscription<latency_test_msgs::msg::Datamult>::SharedPtr> subscribers_;
     long latencies[IN_SIZE][MAX_SUBS_NUMBER];
     long publish_time[IN_SIZE][MAX_SUBS_NUMBER];
     rclcpp::TimerBase::SharedPtr timer_;
