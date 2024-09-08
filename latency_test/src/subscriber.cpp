@@ -9,7 +9,7 @@
 
 using namespace std::chrono;
 #define IN_SIZE (50)
-#define SUBS_NUMBER (10000)
+#define MAX_SUBS_NUMBER (10000)
 #define TIMEOUT_SECONDS (10)
 
 class SubscriberTestNode : public rclcpp::Node
@@ -18,15 +18,6 @@ public:
     SubscriberTestNode() : Node("subscriber_test_node")
     {
         initialize_latencies();
-
-        // Criar assinantes
-        for (int i = 0; i < 50; i++)
-        {
-            subscription_[i] = this->create_subscription<latency_test_msgs::msg::Data>(
-                "chatter", 10,
-                [this, i](latency_test_msgs::msg::Data::SharedPtr msg)
-                { this->subscription_callback(msg, i); });
-        }
 
         // Criar o serviço
         service_ = this->create_service<latency_test_msgs::srv::SubscribeRequest>(
@@ -49,12 +40,26 @@ private:
     void handle_service_request(const std::shared_ptr<latency_test_msgs::srv::SubscribeRequest::Request> request,
                                 std::shared_ptr<latency_test_msgs::srv::SubscribeRequest::Response> response)
     {
-        // Lógica para lidar com a configuração do serviço, se necessário
-        RCLCPP_INFO(this->get_logger(), "request: %ld %ld %ld %ld", 
-            request->size,
-            request->publish_interval,
-            request->publisher_number,
-            request->subscriber_number);
+        int num_subscribers = request->subscriber_number;
+        if (num_subscribers > MAX_SUBS_NUMBER)
+        {
+            RCLCPP_ERROR(this->get_logger(), "Number of subscribers exceeds the maximum allowed.");
+            response->response = false;
+            return;
+        }
+
+        // Criar os assinantes conforme solicitado no serviço
+        subscribers_.clear();
+        for (int i = 0; i < num_subscribers; i++)
+        {
+            auto subscription = this->create_subscription<latency_test_msgs::msg::Data>(
+                "chatter", 10,
+                [this, i](latency_test_msgs::msg::Data::SharedPtr msg)
+                { this->subscription_callback(msg, i); });
+            subscribers_.push_back(subscription);
+        }
+
+        RCLCPP_INFO(this->get_logger(), "Subscribers created: %d", num_subscribers);
         
         // Exemplo de como definir a resposta do serviço
         response->response = true;
@@ -68,7 +73,7 @@ private:
             latencies[msg->sequence_number][id] = latency.nanoseconds();
             publish_time[msg->sequence_number][id] = msg->header.stamp.sec * 1000000000LL + msg->header.stamp.nanosec;
             // RCLCPP_INFO(this->get_logger(), "%d: %ld ns", msg->sequence_number, latency.nanoseconds());
-            if(msg->sequence_number == IN_SIZE-1)
+            if (msg->sequence_number == IN_SIZE - 1)
             {
                 RCLCPP_INFO(this->get_logger(), "%d: finalized", id);
             }
@@ -89,27 +94,27 @@ private:
 
         // Escrever o cabeçalho no arquivo CSV
         csv_file << "Sequence;subscriber_id;Data_size;publish_interval;Latency(ns);publish_time(ns)" << std::endl;
-        for (size_t j = 0; j < SUBS_NUMBER; j++)
+        for (size_t j = 0; j < MAX_SUBS_NUMBER; j++)
         {
-        for (size_t i = 0; i < IN_SIZE; ++i)
-        {
-            csv_file << i << ";"
-                     << j << ";"
-    //                 << test_request.size << ";"
-    //                  << test_request.publish_interval << ";"
-    //                  << latencies[i]  << ";"
-    //                  << publish_time[i]
-                     << std::endl;
-    //         latencies[i] = 0;
-    //         publish_time[i] = 0;
-        }
+            for (size_t i = 0; i < IN_SIZE; ++i)
+            {
+                csv_file << i << ";"
+                         << j << ";"
+    //                     << test_request.size << ";"
+    //                      << test_request.publish_interval << ";"
+    //                      << latencies[i]  << ";"
+    //                      << publish_time[i]
+                         << std::endl;
+    //             latencies[i] = 0;
+    //             publish_time[i] = 0;
+            }
         }
         csv_file.close();
     }
 
     void initialize_latencies()
     {
-        for (size_t j = 0; j < SUBS_NUMBER; j++)
+        for (size_t j = 0; j < MAX_SUBS_NUMBER; j++)
         {
             for (size_t i = 0; i < IN_SIZE; i++)
             {
@@ -119,9 +124,9 @@ private:
         }
     }
     
-    rclcpp::Subscription<latency_test_msgs::msg::Data>::SharedPtr subscription_[SUBS_NUMBER];
-    long latencies[IN_SIZE][SUBS_NUMBER];
-    long publish_time[IN_SIZE][SUBS_NUMBER];
+    std::vector<rclcpp::Subscription<latency_test_msgs::msg::Data>::SharedPtr> subscribers_;
+    long latencies[IN_SIZE][MAX_SUBS_NUMBER];
+    long publish_time[IN_SIZE][MAX_SUBS_NUMBER];
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Service<latency_test_msgs::srv::SubscribeRequest>::SharedPtr service_;
 };
