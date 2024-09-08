@@ -5,7 +5,7 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include "latency_test_msgs/msg/data.hpp"
-#include "latency_test_msgs/srv/file_request.hpp"
+#include "latency_test_msgs/srv/subscribe_request.hpp"  // Inclua o serviço SubscribeRequest
 
 using namespace std::chrono;
 #define IN_SIZE (50)
@@ -28,15 +28,38 @@ public:
                 { this->subscription_callback(msg, i); });
         }
 
-        timer_ = this->create_wall_timer(
-            std::chrono::seconds(TIMEOUT_SECONDS),
-            [this]() {
-                save_latencies_to_csv();
-                rclcpp::shutdown();
+        // Criar o serviço
+        service_ = this->create_service<latency_test_msgs::srv::SubscribeRequest>(
+            "start_subscribers",
+            [this](const std::shared_ptr<latency_test_msgs::srv::SubscribeRequest::Request> request,
+                   std::shared_ptr<latency_test_msgs::srv::SubscribeRequest::Response> response)
+            {
+                this->handle_service_request(request, response);
             });
+
+        // timer_ = this->create_wall_timer(
+        //     std::chrono::seconds(TIMEOUT_SECONDS),
+        //     [this]() {
+        //         save_latencies_to_csv();
+        //         rclcpp::shutdown();
+        //     });
     }
 
 private:
+    void handle_service_request(const std::shared_ptr<latency_test_msgs::srv::SubscribeRequest::Request> request,
+                                std::shared_ptr<latency_test_msgs::srv::SubscribeRequest::Response> response)
+    {
+        // Adicione aqui a lógica para lidar com a configuração do serviço, se necessário
+        RCLCPP_INFO(this->get_logger(), "request: %ld %ld %ld %ld", 
+            request->size,
+            request->publish_interval,
+            request->publisher_number,
+            request->subcriber_number);
+        
+        // Exemplo de como definir a resposta do serviço
+        response->response = true;
+    }
+
     void subscription_callback(latency_test_msgs::msg::Data::SharedPtr msg, int id)
     {
         auto latency = this->now() - msg->header.stamp;
@@ -100,6 +123,7 @@ private:
     long latencies[IN_SIZE][SUBS_NUMBER];
     long publish_time[IN_SIZE][SUBS_NUMBER];
     rclcpp::TimerBase::SharedPtr timer_;
+    rclcpp::Service<latency_test_msgs::srv::SubscribeRequest>::SharedPtr service_;
 };
 
 int main(int argc, char **argv)

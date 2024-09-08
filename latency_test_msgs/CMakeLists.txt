@@ -17,6 +17,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Datamult.msg"
   "srv/FileRequest.srv"
   "srv/PublishRequest.srv"
+  "srv/SubscribeRequest.srv"
   DEPENDENCIES std_msgs
 )
 
