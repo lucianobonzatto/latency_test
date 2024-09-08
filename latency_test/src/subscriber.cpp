@@ -10,7 +10,7 @@
 using namespace std::chrono;
 #define IN_SIZE (50)
 #define MAX_SUBS_NUMBER (10000)
-#define TIMEOUT_SECONDS (10)
+#define TIMEOUT_SECONDS (1)
 
 class SubscriberTestNode : public rclcpp::Node
 {
@@ -18,8 +18,6 @@ public:
     SubscriberTestNode() : Node("subscriber_test_node")
     {
         initialize_latencies();
-
-        // Criar o serviço
         service_ = this->create_service<latency_test_msgs::srv::SubscribeRequest>(
             "start_subscribers",
             [this](const std::shared_ptr<latency_test_msgs::srv::SubscribeRequest::Request> request,
@@ -27,19 +25,18 @@ public:
             {
                 this->handle_service_request(request, response);
             });
-
-        // timer_ = this->create_wall_timer(
-        //     std::chrono::seconds(TIMEOUT_SECONDS),
-        //     [this]() {
-        //         save_latencies_to_csv();
-        //         rclcpp::shutdown();
-        //     });
     }
 
 private:
     void handle_service_request(const std::shared_ptr<latency_test_msgs::srv::SubscribeRequest::Request> request,
                                 std::shared_ptr<latency_test_msgs::srv::SubscribeRequest::Response> response)
     {
+        RCLCPP_INFO(this->get_logger(), "request: %ld %ld %ld %ld", 
+            request->size,
+            request->publish_interval,
+            request->publisher_number,
+            request->subscriber_number);
+
         int num_subscribers = request->subscriber_number;
         if (num_subscribers > MAX_SUBS_NUMBER)
         {
@@ -59,7 +56,13 @@ private:
             subscribers_.push_back(subscription);
         }
 
-        RCLCPP_INFO(this->get_logger(), "Subscribers created: %d", num_subscribers);
+        timer_ = this->create_wall_timer(
+            std::chrono::seconds(TIMEOUT_SECONDS),
+            [this]() {
+                save_latencies_to_csv();
+                initialize_latencies();
+                subscribers_.clear();
+            });
         
         // Exemplo de como definir a resposta do serviço
         response->response = true;
