@@ -11,7 +11,7 @@ using namespace std::chrono;
 #define IN_SIZE (50)
 #define MAX_SUBS_NUMBER (1000)
 #define MAX_PUBL_NUMBER (1000)
-#define TIMEOUT_SECONDS (30)
+#define TIMEOUT_SECONDS (10)
 
 class SubscriberTestNode : public rclcpp::Node
 {
