@@ -9,8 +9,9 @@
 
 using namespace std::chrono;
 #define IN_SIZE (50)
-#define MAX_SUBS_NUMBER (10000)
-#define TIMEOUT_SECONDS (1)
+#define MAX_SUBS_NUMBER (1000)
+#define MAX_PUBL_NUMBER (1000)
+#define TIMEOUT_SECONDS (30)
 
 class SubscriberTestNode : public rclcpp::Node
 {
@@ -39,12 +40,6 @@ private:
             request->subscriber_number);
 
         int num_subscribers = request->subscriber_number;
-        if (num_subscribers > MAX_SUBS_NUMBER)
-        {
-            RCLCPP_ERROR(this->get_logger(), "Number of subscribers exceeds the maximum allowed.");
-            response->response = false;
-            return;
-        }
 
         // Criar os assinantes conforme solicitado no serviço
         subscribers_.clear();
@@ -75,19 +70,27 @@ private:
         auto latency = this->now() - msg->header.stamp;
         if (msg->sequence_number < IN_SIZE)
         {
-            latencies[msg->sequence_number][id] = latency.nanoseconds();
-            publish_time[msg->sequence_number][id] = msg->header.stamp.sec * 1000000000LL + msg->header.stamp.nanosec;
+            int position = msg->sequence_number + msg->publisher_number * IN_SIZE;
+            publisher_number[position][id] = msg->publisher_number;
+            latencies[position][id] = latency.nanoseconds();
+            publish_time[position][id] = msg->header.stamp.sec * 1000000000LL + msg->header.stamp.nanosec;
             // RCLCPP_INFO(this->get_logger(), "%d: %ld ns", msg->sequence_number, latency.nanoseconds());
-            if (msg->sequence_number == IN_SIZE - 1)
-            {
-                RCLCPP_INFO(this->get_logger(), "%d: finalized", id);
-            }
+            // if (msg->sequence_number == IN_SIZE - 1)
+            // {
+            //     RCLCPP_INFO(this->get_logger(), "%d: finalized", id);
+            // }
         }
     }
 
     void save_latencies_to_csv()
     {
-        std::string csv_file_path = "/home/ubuntu22/ros2_ws/src/latency_test/data/subscriber/name.csv";
+
+        std::string name =  "size_" + std::to_string(test_request.size) +
+                            "_interval_" + std::to_string(test_request.publish_interval) +
+                            "_publisher_" + std::to_string(test_request.publisher_number) +
+                            "_subscriber_" + std::to_string(test_request.subscriber_number);
+
+        std::string csv_file_path = "/home/ubuntu22/ros2_ws/src/latency_test/data/subscriber/" + name + ".csv";
         RCLCPP_INFO(this->get_logger(), "save CSV file: %s", csv_file_path.c_str());
         std::ofstream csv_file(csv_file_path, std::ios::out | std::ios::trunc);
 
@@ -98,13 +101,14 @@ private:
         }
 
         // Escrever o cabeçalho no arquivo CSV
-        csv_file << "Sequence;subscriber_id;Data_size;publish_interval;publisher_number;subscriber_number;Latency(ns);publish_time(ns)" << std::endl;
+        csv_file << "Sequence;subscriber_id;publisher_id;Data_size;publish_interval;publisher_number;subscriber_number;Latency(ns);publish_time(ns)" << std::endl;
         for (size_t j = 0; j < subscribers_.size(); ++j)
         {
-            for (size_t i = 0; i < IN_SIZE; ++i)
+            for (int i = 0; i < (test_request.publisher_number * IN_SIZE); ++i)
             {
-                csv_file << i << ";"
+                csv_file << i % IN_SIZE << ";"
                          << j << ";"
+                         << publisher_number[i][j] << ";"
                          << test_request.size << ";"
                          << test_request.publish_interval << ";"
                          << test_request.publisher_number << ";"
@@ -123,7 +127,7 @@ private:
     {
         for (size_t j = 0; j < MAX_SUBS_NUMBER; j++)
         {
-            for (size_t i = 0; i < IN_SIZE; i++)
+            for (size_t i = 0; i < MAX_PUBL_NUMBER * IN_SIZE; i++)
             {
                 latencies[i][j] = 0;
                 publish_time[i][j] = 0;
@@ -132,8 +136,9 @@ private:
     }
     
     std::vector<rclcpp::Subscription<latency_test_msgs::msg::Datamult>::SharedPtr> subscribers_;
-    long latencies[IN_SIZE][MAX_SUBS_NUMBER];
-    long publish_time[IN_SIZE][MAX_SUBS_NUMBER];
+    long latencies[MAX_PUBL_NUMBER * IN_SIZE][MAX_SUBS_NUMBER];
+    long publish_time[MAX_PUBL_NUMBER * IN_SIZE][MAX_SUBS_NUMBER];
+    long publisher_number[MAX_PUBL_NUMBER * IN_SIZE][MAX_SUBS_NUMBER];
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Service<latency_test_msgs::srv::SubscribeRequest>::SharedPtr service_;
     latency_test_msgs::srv::SubscribeRequest::Request test_request;
