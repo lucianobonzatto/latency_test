@@ -9,7 +9,7 @@
 #include "latency_test_msgs/srv/publish_request.hpp"
 
 using namespace std::chrono;
-#define OUT_SIZE (50)
+#define OUT_SIZE (100)
 
 class PublishTestNode : public rclcpp::Node
 {

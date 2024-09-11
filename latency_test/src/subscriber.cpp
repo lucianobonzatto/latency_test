@@ -8,7 +8,7 @@
 #include "latency_test_msgs/srv/subscribe_request.hpp"  // Inclua o serviço SubscribeRequest
 
 using namespace std::chrono;
-#define IN_SIZE (50)
+#define IN_SIZE (100)
 #define MAX_SUBS_NUMBER (1000)
 #define MAX_PUBL_NUMBER (1000)
 #define TIMEOUT_SECONDS (10)
@@ -18,7 +18,20 @@ class SubscriberTestNode : public rclcpp::Node
 public:
     SubscriberTestNode() : Node("subscriber_test_node")
     {
+        // Alocando memória dinamicamente para os arrays
+        latencies = new long*[MAX_PUBL_NUMBER * IN_SIZE];
+        publish_time = new long*[MAX_PUBL_NUMBER * IN_SIZE];
+        publisher_number = new long*[MAX_PUBL_NUMBER * IN_SIZE];
+
+        for (int i = 0; i < MAX_PUBL_NUMBER * IN_SIZE; ++i)
+        {
+            latencies[i] = new long[MAX_SUBS_NUMBER]();
+            publish_time[i] = new long[MAX_SUBS_NUMBER]();
+            publisher_number[i] = new long[MAX_SUBS_NUMBER]();
+        }
+
         initialize_latencies();
+
         service_ = this->create_service<latency_test_msgs::srv::SubscribeRequest>(
             "start_subscribers",
             [this](const std::shared_ptr<latency_test_msgs::srv::SubscribeRequest::Request> request,
@@ -26,6 +39,20 @@ public:
             {
                 this->handle_service_request(request, response);
             });
+    }
+
+    ~SubscriberTestNode()
+    {
+        // Liberar a memória alocada dinamicamente
+        for (int i = 0; i < MAX_PUBL_NUMBER * IN_SIZE; ++i)
+        {
+            delete[] latencies[i];
+            delete[] publish_time[i];
+            delete[] publisher_number[i];
+        }
+        delete[] latencies;
+        delete[] publish_time;
+        delete[] publisher_number;
     }
 
 private:
@@ -74,17 +101,11 @@ private:
             publisher_number[position][id] = msg->publisher_number;
             latencies[position][id] = latency.nanoseconds();
             publish_time[position][id] = msg->header.stamp.sec * 1000000000LL + msg->header.stamp.nanosec;
-            // RCLCPP_INFO(this->get_logger(), "%d: %ld ns", msg->sequence_number, latency.nanoseconds());
-            // if (msg->sequence_number == IN_SIZE - 1)
-            // {
-            //     RCLCPP_INFO(this->get_logger(), "%d: finalized", id);
-            // }
         }
     }
 
     void save_latencies_to_csv()
     {
-
         std::string name =  "size_" + std::to_string(test_request.size) +
                             "_interval_" + std::to_string(test_request.publish_interval) +
                             "_publisher_" + std::to_string(test_request.publisher_number) +
@@ -125,20 +146,21 @@ private:
 
     void initialize_latencies()
     {
-        for (size_t j = 0; j < MAX_SUBS_NUMBER; j++)
+        for (int i = 0; i < MAX_PUBL_NUMBER * IN_SIZE; ++i)
         {
-            for (size_t i = 0; i < MAX_PUBL_NUMBER * IN_SIZE; i++)
+            for (int j = 0; j < MAX_SUBS_NUMBER; ++j)
             {
                 latencies[i][j] = 0;
                 publish_time[i][j] = 0;
+                publisher_number[i][j] = 0;
             }
         }
     }
-    
+
     std::vector<rclcpp::Subscription<latency_test_msgs::msg::Datamult>::SharedPtr> subscribers_;
-    long latencies[MAX_PUBL_NUMBER * IN_SIZE][MAX_SUBS_NUMBER];
-    long publish_time[MAX_PUBL_NUMBER * IN_SIZE][MAX_SUBS_NUMBER];
-    long publisher_number[MAX_PUBL_NUMBER * IN_SIZE][MAX_SUBS_NUMBER];
+    long** latencies;
+    long** publish_time;
+    long** publisher_number;
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Service<latency_test_msgs::srv::SubscribeRequest>::SharedPtr service_;
     latency_test_msgs::srv::SubscribeRequest::Request test_request;
