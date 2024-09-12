@@ -10,18 +10,16 @@ ros2 service call /start_test latency_test_msgs/srv/FileRequest "{name: 'latenci
 
 # TODO
 
-corrigir o jitter
-
-retirar outliers
-
-analisar latencia no timer
-
+retirar outliers -> remover baseado no desvio padrão
+calcular a previsibilidade pegando pares de casos e depois fazer a média dos resultados
+calcular a moda
 ```
 -------------------------------------------------------------
 | publis  |    topico   |   subsc   |    stress   |   rede  |
 -------------------------------------------------------------
-| 1       |    1        |   1       |    sim      |   nao   |
+| 1       |    1        |   1       |  sim/nao    |   nao   |
 | mult    |    1        |   1       |    nao      |   nao   |
 | 1       |    1        |   mult    |    nao      |   nao   |
+| mult    |    1        |   mult    |    nao      |   nao   |
 -------------------------------------------------------------
 ```
