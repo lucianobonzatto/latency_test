@@ -5,8 +5,9 @@ sizes=(10 100 200 400 600 800 1000 5000 10000 50000 100000 500000 1000000)
 # sizes=(10)
 publish_intervals=(10)
 # publisher_numbers=(1 2 3 4 5 6 7 8 9 10 20 30 40 60 80 100)
-publisher_numbers=(1)
-subscriber_numbers=(1 2 3 4 5 6 7 8 9 10 20 30 40 60 80 100)
+publisher_numbers=(1 2 3 4 5 6 7 8 9 10 20 30)
+# publisher_numbers=(1)
+subscriber_numbers=(1 2 3 4 5 6 7 8 9 10 20 30)
 # subscriber_numbers=(1)
 
 # Loop sobre os valores para chamar os serviços
